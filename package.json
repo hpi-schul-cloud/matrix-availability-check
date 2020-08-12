@@ -1,0 +1,16 @@
+{
+  "name": "availability-check",
+  "version": "0.0.0",
+  "description": "Check if/which matrix services are available",
+  "main": "index.js",
+  "dependencies": {
+    "axios": "^0.19.2",
+    "crypto-js": "^4.0.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"No Tests so far\""
+  },
+  "author": "Max Klenk <max@klenk.biz>",
+  "license": "MIT"
+}
