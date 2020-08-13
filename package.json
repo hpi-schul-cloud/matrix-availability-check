@@ -5,7 +5,8 @@
   "main": "index.js",
   "dependencies": {
     "axios": "^0.19.2",
-    "crypto-js": "^4.0.0"
+    "crypto-js": "^4.0.0",
+    "node-ssh": "^11.0.0"
   },
   "devDependencies": {},
   "scripts": {

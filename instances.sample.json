@@ -3,6 +3,8 @@
     "name": "Niedersachsen",
     "key": "niedersachsen",
     "sharedSecret": "XXX",
-    "alternativeDomain": "https://niedersachsen.cloud"
-  },
+    "alternativeDomain": "https://niedersachsen.cloud",
+    "host": "11.22.33.44",
+    "privateKey": "..."
+  }
 ]

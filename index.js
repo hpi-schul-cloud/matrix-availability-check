@@ -1,5 +1,6 @@
 const axios_constructor = require('axios');
 const hmacSHA512 = require('crypto-js/hmac-sha512');
+const { NodeSSH } = require('node-ssh')
 
 const instances = require('./instances.json');
 
@@ -129,6 +130,53 @@ async function testCors(instance) {
   return result;
 }
 
+async function testHydra(instance) {
+  const result = {};
+  let domain = instance.alternativeHydraDomain || `https://hydra.${instance.key}.schul-cloud.org`
+  await axios
+    .get(domain + '/health/alive')
+    .then((res) => {
+      result.hydraAlive = res.data.status === 'ok';
+    })
+    .catch((err) => {
+      result.hydraAlive = `FAILED`;
+    });
+
+  await axios
+    .get(`https://matrix.${instance.key}.messenger.schule/_matrix/client/r0/login/sso/redirect?redirectUrl=https%3A%2F%2Fapp.element.io%2F%23%2F`)
+    .then((res) => {
+      result.oauth = res.request._redirectable._currentUrl;
+    })
+    .catch((err) => {
+      if (err.response && JSON.stringify(err.response.data) === JSON.stringify({ errcode: 'M_UNRECOGNIZED', error: 'Unrecognized request' })) {
+        result.oauth = 'DISABLED';
+      } else {
+        result.oauth = 'FAILED';
+      }
+    });
+
+  return result;
+}
+
+async function testSSH(instance) {
+  const result = {};
+
+  ssh = new NodeSSH()
+  await ssh.connect({
+    host: instance.host || `https://${instance.key}.messenger.schule`,
+    username: 'root',
+    privateKey: instance.privateKey,
+  })
+    .then(() => {
+      result.ssh = true;
+    })
+    .catch(() => {
+      result.ssh = false;
+    })
+
+  return result;
+}
+
 async function checkInstances() {
   // init
   const result = {};
@@ -144,23 +192,22 @@ async function checkInstances() {
   };
 
   // checks
+  const checks = [
+    testSynapse,
+    testEmbed,
+    testCors,
+    testHydra,
+    testSSH,
+  ];
   const promises = [];
   for (const instance of instances) {
-    promises.push(
-      testSynapse(instance).then((res) => {
-        result[instance.key] = Object.assign(result[instance.key], res)
-      })
-    );
-    promises.push(
-      testEmbed(instance).then((res) => {
-        result[instance.key] = Object.assign(result[instance.key], res)
-      })
-    );
-    promises.push(
-      testCors(instance).then((res) => {
-        result[instance.key] = Object.assign(result[instance.key], res)
-      })
-    );
+    for (const check of checks) {
+      promises.push(
+        check(instance).then((res) => {
+          result[instance.key] = Object.assign(result[instance.key], res)
+        })
+      );
+    }
   }
 
   await Promise.all(promises);
@@ -168,3 +215,4 @@ async function checkInstances() {
 }
 
 checkInstances().then(console.table);
+
