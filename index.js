@@ -43,41 +43,43 @@ const axios = {
 
 
 function obtain_access_token(user_id, homeserver_api_url, shared_secret) {
-    const login_api_url = homeserver_api_url + '/_matrix/client/r0/login'
+  const login_api_url = homeserver_api_url + '/_matrix/client/r0/login'
 
-    const password = hmacSHA512(user_id, shared_secret).toString();
+  const password = hmacSHA512(user_id, shared_secret).toString();
 
-    const payload = {
-        'type': 'm.login.password',
-        'user': user_id,
-        'password': password,
-    }
+  const payload = {
+    'type': 'm.login.password',
+    'user': user_id,
+    'password': password,
+  }
 
-    return axios.post(login_api_url, payload)
-      .then(response => {
-        const session = {
-          userId: user_id,
-          homeserverUrl: homeserver_api_url,
-          accessToken: response.data.access_token,
-        }
-        return session
-      })
+  return axios.post(login_api_url, payload)
+    .then(response => {
+      const session = {
+        userId: user_id,
+        homeserverUrl: homeserver_api_url,
+        accessToken: response.data.access_token,
+      }
+      return session
+    })
 }
 
 async function testSynapse(instance) {
   let accessToken = null;
   const result = {};
-  await obtain_access_token(`@sync:${instance.key}.messenger.schule`, `https://matrix.${instance.key}.messenger.schule`, instance.sharedSecret)
+  const domain = instance.baseDomain || `${instance.key}.messenger.schule`;
+  await obtain_access_token(`@sync:${domain}`, `https://matrix.${domain}`, instance.sharedSecret)
     .then((res) => {
       accessToken = res.accessToken;
       result.syncConnection = true;
     })
-    .catch(() => {
+    .catch((err) => {
+      console.error(err);
       result.syncConnection = false;
     });
 
   if (accessToken) {
-    await axios.get(`https://matrix.${instance.key}.messenger.schule/_synapse/admin/v1/rooms`, { headers: { Authorization: `Bearer ${accessToken}` } })
+    await axios.get(`https://matrix.${domain}/_synapse/admin/v1/rooms`, { headers: { Authorization: `Bearer ${accessToken}` } })
       .then((res) => {
         result.createdRooms = res.data.total_rooms;
       })
@@ -85,9 +87,9 @@ async function testSynapse(instance) {
         result.createdRooms = 'FAILED';
       });
 
-    await axios.get(`https://matrix.${instance.key}.messenger.schule/_synapse/admin/v2/users`, { headers: { Authorization: `Bearer ${accessToken}` } })
+    await axios.get(`https://matrix.${domain}/_synapse/admin/v2/users`, { headers: { Authorization: `Bearer ${accessToken}` } })
       .then((res) => {
-        result.createdUsers = res.data.total;
+        result.createdUsers = res.data.total || res.data.users.length;
       })
       .catch(() => {
         result.createdUsers = 'FAILED';
@@ -113,7 +115,7 @@ async function testEmbed(instance) {
 
 async function testCors(instance) {
   const result = {};
-  let domain = instance.alternativeDomain || `https://${instance.key}.schul-cloud.org`
+  let domain = instance.alternativeDomain ? `https://${instance.alternativeDomain}` : `https://${instance.key}.schul-cloud.org`;
   await axios.get(domain)
     .then((res) => {
       const cors = res.headers['content-security-policy'];
@@ -132,7 +134,7 @@ async function testCors(instance) {
 
 async function testHydra(instance) {
   const result = {};
-  let domain = instance.alternativeHydraDomain || `https://hydra.${instance.key}.schul-cloud.org`
+  let domain = instance.alternativeDomain ? `https://oauth.${instance.alternativeDomain}` : `https://oauth.${instance.key}.schul-cloud.org`;
   await axios
     .get(domain + '/health/alive')
     .then((res) => {
@@ -164,13 +166,13 @@ async function testSSH(instance) {
   ssh = new NodeSSH()
   await ssh.connect({
     host: instance.host || `https://${instance.key}.messenger.schule`,
-    username: 'root',
+    username: instance.user || 'root',
     privateKey: instance.privateKey,
   })
     .then(() => {
       result.ssh = true;
     })
-    .catch(() => {
+    .catch((err) => {
       result.ssh = false;
     })
 
