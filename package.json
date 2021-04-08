@@ -1,6 +1,6 @@
 {
-  "name": "availability-check",
-  "version": "0.0.0",
+  "name": "matrix-availability-check",
+  "version": "1.0.0",
   "description": "Check if/which matrix services are available",
   "main": "index.js",
   "dependencies": {
@@ -10,6 +10,7 @@
   },
   "devDependencies": {},
   "scripts": {
+    "start": "node index.js",
     "test": "echo \"No Tests so far\""
   },
   "author": "Max Klenk <max@klenk.biz>",
