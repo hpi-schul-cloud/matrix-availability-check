@@ -50,6 +50,8 @@ function obtain_access_token(user_id, homeserver_api_url, shared_secret) {
   const payload = {
     type: "m.login.password",
     user: user_id,
+    initial_device_display_name: "availability_check",
+    device_id: "sync_availability_check",
     password: password,
   };
 
