@@ -54,7 +54,7 @@ function obtain_access_token(user_id, homeserver_api_url, shared_secret) {
     device_id: "sync_availability_check",
     password: password,
   };
-
+  //console.debug(JSON.stringify(payload));
   return axios.post(login_api_url, payload).then((response) => {
     const session = {
       userId: user_id,
@@ -68,26 +68,33 @@ function obtain_access_token(user_id, homeserver_api_url, shared_secret) {
 async function testSynapse(instance) {
   const result = {};
   const domain = instance.baseDomain || `${instance.key}.messenger.schule`;
-  if (!instance.accessToken) {
+  let accessToken = instance.accessToken;
+  if (!accessToken) {
+    const start_time = new Date().getTime()
     await obtain_access_token(
       `@sync:${domain}`,
       `https://matrix.${domain}`,
       instance.sharedSecret
     )
       .then((res) => {
-        instance.accessToken = res.accessToken;
+        accessToken = res.accessToken;
         result.syncConnection = true;
+        result.loginTimeMS = new Date().getTime() - start_time;
       })
       .catch((err) => {
-        console.error(err);
+        if (err.response) {
+          console.error(err.response.status, err.response.statusText, err.config.url);
+        } else {
+          console.error(err.code, err.config.url);
+        }
         result.syncConnection = false;
       });
   }
 
-  if (instance.accessToken) {
+  if (accessToken) {
     await axios
       .get(`https://matrix.${domain}/_synapse/admin/v1/rooms`, {
-        headers: { Authorization: `Bearer ${instance.accessToken}` },
+        headers: { Authorization: `Bearer ${accessToken}` },
       })
       .then((res) => {
         result.createdRooms = res.data.total_rooms;
@@ -100,7 +107,7 @@ async function testSynapse(instance) {
 
     await axios
       .get(`https://matrix.${domain}/_synapse/admin/v2/users`, {
-        headers: { Authorization: `Bearer ${instance.accessToken}` },
+        headers: { Authorization: `Bearer ${accessToken}` },
       })
       .then((res) => {
         result.createdUsers = res.data.total || res.data.users.length;
