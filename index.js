@@ -197,7 +197,7 @@ async function testHydra(instance) {
         JSON.stringify(err.response.data) ===
           JSON.stringify({
             errcode: "M_UNRECOGNIZED",
-            error: "Unrecognized request",
+            error: "Homeserver not configured for SSO.",
           })
       ) {
         result.oauth = "DISABLED";
@@ -212,19 +212,20 @@ async function testHydra(instance) {
 async function testSSH(instance) {
   const result = {};
 
-  ssh = new NodeSSH();
-  await ssh
-    .connect({
-      host: instance.host || `https://${instance.key}.messenger.schule`,
-      username: instance.user || "root",
-      privateKey: instance.privateKey,
-    })
-    .then(() => {
-      result.ssh = true;
-    })
-    .catch((err) => {
-      result.ssh = false;
-    });
+  if (instance.privateKey) {
+    await new NodeSSH()
+      .connect({
+        host: instance.host || `https://${instance.key}.messenger.schule`,
+        username: instance.user || "root",
+        privateKey: instance.privateKey,
+      })
+      .then(() => {
+        result.ssh = true;
+      })
+      .catch((err) => {
+        result.ssh = false;
+      });
+  }
 
   return result;
 }
